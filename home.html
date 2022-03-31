@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>UBlog - Admin</title>
+		<link
+			rel="stylesheet"
+			href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+			integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+			crossorigin="anonymous"
+		/>
+	</head>
+	<body>
+		<nav class="navbar navbar-dark bg-dark mb-5">
+			<a class="navbar-brand" href="#">
+				<img
+					src="./recu/logo.png"
+					width="50"
+					height="50"
+					class="d-inline-block align-top"
+					alt=""
+				/>
+				UBlog
+			</a>
+		</nav>
+		<div class="container">
+			<div class="row">
+		
+		 <div class="col">
+			<h1>Bienvenido</h1>
+			<h2>Publicar nuevo post</h2>
+			<p id="currentUser"></p>
+
+			<div class="form-group">
+				<label for="signupGender">Tipo</label>
+				<select id="signupGender" class="form-control">
+					<option value="Imagen">Imagen</option>
+					<option value="Video">Video</option>
+				</select>
+			</div>
+			<h3>Imagenes</h3>
+			<div class="m-2">
+				<span><input type="file" id="imageFileInput" /></span>
+				<span
+					><button id="loadimages" class="btn btn-success">
+						Publicar 
+					</button></span
+				>
+			</div>
+			<div>
+
+			</div>
+		</div>	
+		
+		<div class="col">
+						<button id="loadMedicines" class="btn btn-success">
+							URL
+						</button>
+
+		</div>
+				
+				<button id="getReport" class="btn btn-primary w-100 m-2">
+					Generar reporte en pdf
+				</button>
+			</div>
+			<div class="d-flex flex-column" id="medicines"></div>
+			
+		</div>
+		<script>
+			//getting URL parameters
+			const queryStrings = window.location.search;
+			const urlParams = new URLSearchParams(queryStrings);
+			const firstName = urlParams.get("first_name");
+			const lastName = urlParams.get("last_name");
+
+			//getting inputs
+			let currentUser = document.getElementById("currentUser");
+			currentUser.innerText = `Bienvenido ${firstName} ${lastName}!`;
+			let medicines = document.getElementById("medicines");
+			let medicinesFileInput = document.getElementById("imageFileInput");
+			let loadMedicines = document.getElementById("loadimages");
+			let gerReport = document.getElementById("getReport");
+
+			//getting medicines
+			getMedicines();
+			function getMedicines() {
+				fetch("http://localhost:5000/medicine")
+					.then((response) => response.json())
+					.then((data) => {
+						medicines.innerHTML = "";
+						data.forEach((medicine) => {
+							let card = document.createElement("div");
+							card.className = "card m-2";
+							card.id = medicine.name;
+							let cardBody = document.createElement("div");
+							cardBody.className = "card-body";
+							let medicineName = document.createElement("h5");
+							medicineName.className = "card-title";
+							medicineName.innerText = medicine.name;
+							let medicineQuantity = document.createElement("p");
+							medicineQuantity.className = "card-subtitle";
+							medicineQuantity.innerText = "Cantidad: " + medicine.quantity;
+							let medicineDescription = document.createElement("p");
+							medicineDescription.innerText = medicine.description;
+							let medicineDelete = document.createElement("BUTTON");
+							medicineDelete.className = "btn btn-danger w-100";
+							medicineDelete.innerText = "Eliminar Medicina";
+							medicineDelete.addEventListener("click", () => {
+								fetch("http://localhost:5000/medicine?name=" + medicine.name, {
+									method: "DELETE",
+								})
+									.then((response) => response.json())
+									.then((data) => getMedicines())
+									.catch((error) => console.error(error));
+							});
+							cardBody.appendChild(medicineName);
+							cardBody.appendChild(medicineQuantity);
+							cardBody.appendChild(medicineDescription);
+							cardBody.appendChild(medicineDelete);
+							card.appendChild(cardBody);
+							medicines.appendChild(card);
+						});
+					})
+					.catch((error) => console.error(error));
+			}
+
+			//loading medicines
+			loadMedicines.addEventListener("click", () => {
+				let file = medicinesFileInput.files[0];
+				let reader = new FileReader();
+				reader.readAsText(file);
+				reader.onload = () => {
+					let data = reader.result;
+					let medicines = data.split("\n");
+					medicines = medicines.splice(1, medicines.length - 1);
+					medicines.forEach((medicine) => {
+						if (medicine !== "") {
+							let medicineData = medicine.split(",");
+							const newMedicine = {
+								name: medicineData[0],
+								price: medicineData[1],
+								description: medicineData[2],
+								quantity: medicineData[3],
+							};
+							console.log(newMedicine);
+							fetch("http://localhost:5000/medicine", {
+								method: "POST",
+								headers: {
+									"content-type": "application/json",
+								},
+								body: JSON.stringify(newMedicine),
+							})
+								.then((response) => response.json())
+								.then((data) => getMedicines())
+								.catch((error) => console.error(error));
+						}
+					});
+				};
+				reader.onerror = () => console.error(reader.error);
+			});
+
+			//generate pdf report
+			getReport.addEventListener("click", () => {
+				window.open("http://localhost:5000/reports/medicine");
+			});
+		</script>
+		<script
+			src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+			integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+			integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+			integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+			crossorigin="anonymous"
+		></script>
+	</body>
+</html>
