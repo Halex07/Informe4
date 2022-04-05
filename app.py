@@ -1,38 +1,40 @@
 import objects
-
-from flask import Flask, request, jsonify
+import os
+from flask import Flask, request, jsonify, flash, redirect, url_for, render_template
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
+
+
+UPLOAD_FOLDER = '/path/to/the/uploads'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+
 app = Flask(__name__)
+
+app.config['UPLOAD_FOLDER'] = "./recu"
+
 CORS(app)
 
 users = []
 medicines = []
+FILE=0
 
 
-@app.route("/reports/medicine")
-def medicines_report():
-    html = '<!DOCTYPE html>'
-    html += '<html lang="en">'
-    html += '<head>'
-    html += "<title>Medicines</title>"
-    html += "</head>"
-    html += "<body>"
-    html += '<table style="width:100%; border: 1px solid black; margin: 5px">'
-    html += '<tr><th>Name</th><th>Description</th><th>Quantity</th><th>Price</th></tr>'
-    for medicine in medicines:
-        html += "<tr>"
-        html += "<td>" + medicine.name + "</td>"
-        html += "<td>" + medicine.description + "</td>"
-        html += "<td>" + str(medicine.quantity) + "</td>"
-        html += "<td>" + str(medicine.price) + "</td>"
-        html += "</tr>"
-    html += "</table>"
-    html += "</body>"
-    html += '</html >'
-    result_file = open("./static/medicines.jpeg", "w+b")
+
+
+@app.route("/", methods=['GET', 'POST'])
+def upload_file():
+    return render_template('home.html')
+
+@app.route("/uploader", methods=['GET', 'POST'])
+def uploadader():
+    if request.method == "POST":
+        f = request.files['archivo']
+        filename = secure_filename(f.filename)
+        f.save(os.path.join(app.config['UPLOAD_FOLDER', filename]))
+
+        return "Archivo subido exitosamente"
     
-    result_file.close()
-    return app.send_static_file("medicines.pdf")
+
 
 
 @app.route("/signup", methods=["POST"])
@@ -79,45 +81,6 @@ def login():
     return jsonify({"message": "bad credentials"}), 400
 
 
-@app.route("/medicine", methods=["GET", "POST", "PUT", "DELETE"])
-def medicine():
-    if request.method == "GET":
-        tmp = []
-        for medicine in medicines:
-            tmp.append({"name": medicine.name, "price": medicine.price,
-                       "description": medicine.description, "quantity": medicine.quantity})
-        return jsonify(tmp), 200
-    elif request.method == "POST":
-        data = request.get_json()
-        name = data["name"]
-        price = data["price"]
-        description = data["description"]
-        quantity = data["quantity"]
-        valid_medicine = True
-        for medicine in medicines:
-            if medicine.name == name:
-                valid_medicine = False
-        if valid_medicine:
-            medicines.append(objects.Medicine(
-                name, price, description, quantity))
-            return jsonify(request.get_json()), 200
-        else:
-            return jsonify({"message": "medicine repeated"}), 400
-    elif request.method == "PUT":
-        data = request.get_json()
-        name = data["name"]
-        price = data["price"]
-        description = data["description"]
-        quantity = data["quantity"]
-        for medicine in medicines:
-            if medicine.name == name:
-                medicine.price = price
-                medicine.description = description
-                medicine.quantity = quantity
-        return jsonify({"message": "medicine edited"}), 200
-    elif request.method == "DELETE":
-        name = request.args.get("name")
-        for medicine in medicines:
-            if medicine.name == name:
-                medicines.remove(medicine)
-        return jsonify({"message": "medicine deleted"}), 200
+
+
+
